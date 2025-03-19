@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monad 交互项目管理</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --background-color: #f5f7fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            margin: 2rem;
+            background-color: var(--background-color);
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .stats-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .task-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.1s, background 0.3s;
+        }
+
+        .task-button:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .project-list {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .project-item {
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .project-item.unopened {
+            background: #f8f9fa;
+            border: 2px solid var(--primary-color);
+        }
+
+        .status-dot {
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .unopened-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="stats-card">
+            <div>
+                <h2>项目统计</h2>
+                <p>已打开：<span id="openedCount">0</span></p>
+                <p>未打开：<span id="unopenedCount">0</span></p>
+            </div>
+            <button class="task-button" onclick="openRandomProject()">获取随机任务</button>
+        </div>
+
+        <div class="project-list">
+            <h3>项目列表</h3>
+            <div id="projectList"></div>
+        </div>
+    </div>
+
+    <script>
+        // 项目列表（已去重）
+        const projects = [
+            { name: "Kuru Swap", url: "https://www.kuru.io/swap" },
+            { name: "Curvance Monad", url: "https://monad.curvance.com/monad" },
+            { name: "Bebop", url: "https://bebop.xyz/" },
+            { name: "Bean Exchange", url: "https://swap.bean.exchange/" },
+            { name: "Flap Board", url: "https://monad.flap.sh/board" },
+            { name: "Fukunad", url: "https://testnet.fukunad.xyz/" },
+            { name: "Izumi Finance", url: "https://alpha.izumi.finance/trade/swap" },
+            { name: "Hashflow", url: "https://app.hashflow.com/" },
+            { name: "Kintsu Staking", url: "https://kintsu.xyz/staking" },
+            { name: "Magma Staking", url: "https://www.magmastaking.xyz/" },
+            { name: "Monorail", url: "https://testnet-preview.monorail.xyz/" },
+            { name: "Nitro Finance", url: "https://testapp.nitrofinance.xyz/trade" },
+            { name: "NFTs2Me", url: "https://nfts2me.com/create/edition/" },
+            { name: "Multipli", url: "https://testnet.multipli.fi/" },
+            { name: "MU Digital", url: "https://testnet.mudigital.net/" },
+            { name: "Nostra Finance", url: "https://monad.nostra.finance/lend-borrow" },
+            { name: "Octo Exchange", url: "https://octo.exchange/swap" },
+            { name: "PancakeSwap", url: "https://pancakeswap.finance/?chain=monadTestnet" },
+            { name: "Redbrick Portal", url: "https://redbrick.land/web3-portal?tab=monad_testnet" },
+            { name: "Sky Trade", url: "https://www.monad.sky.trade/" },
+            { name: "Timeswap", url: "https://app.timeswap.io/markets?chainId=10143" },
+            { name: "Zona Finance", url: "https://app.zona.finance/trade" },
+            { name: "Monad Testnet", url: "https://testnet.monad.xyz/" },
+            { name: "Kuru Markets", url: "https://www.kuru.io/markets" },
+            { name: "Shmonad", url: "https://www.shmonad.xyz/" },
+            { name: "Uniswap Monad", url: "https://app.uniswap.org/swap?chain=monad" },
+            { name: "Bebop Trade", url: "https://bebop.xyz/trade?network=monad&sell=MON&buy=WMON" },
+            { name: "Narwhal Finance", url: "https://testnet.narwhal.finance/slots" },
+            { name: "Dirol Network", url: "https://dex.dirol.network/swap" },
+            { name: "Ambient Finance", url: "https://monad.ambient.finance/" },
+            { name: "Clober Trade", url: "https://alpha.clober.io/trade?chain=10143" },
+            { name: "Crystal Exchange", url: "https://app.crystal.exchange/swap" },
+            { name: "XLMeme", url: "https://alpha-testnet.xlmeme.com/monad" },
+            { name: "APR Staking", url: "https://stake.apr.io/" }
+        ];
+
+        let openedProjects = JSON.parse(localStorage.getItem('openedProjects')) || [];
+        
+        function updateStats() {
+            document.getElementById('openedCount').textContent = openedProjects.length;
+            document.getElementById('unopenedCount').textContent = projects.length - openedProjects.length;
+            renderProjectList();
+        }
+
+        function openRandomProject() {
+            const randomIndex = Math.floor(Math.random() * projects.length);
+            const selectedProject = projects[randomIndex];
+            
+            if (!openedProjects.includes(selectedProject.url)) {
+                openedProjects.push(selectedProject.url);
+                localStorage.setItem('openedProjects', JSON.stringify(openedProjects));
+            }
+            
+            window.open(selectedProject.url, '_blank');
+            updateStats();
+        }
+
+        function renderProjectList() {
+            const container = document.getElementById('projectList');
+            container.innerHTML = projects.map(project => `
+                <div class="project-item ${!openedProjects.includes(project.url) ? 'unopened' : ''}">
+                    <div>
+                        <span class="status-dot" style="background:${openedProjects.includes(project.url) ? '#ccc' : 'var(--primary-color)'}"></span>
+                        ${project.name}
+                    </div>
+                    ${!openedProjects.includes(project.url) ? 
+                        '<span class="unopened-badge">未完成</span>' : 
+                        '<span style="color: #666">已完成</span>'}
+                </div>
+            `).join('');
+        }
+
+        // 初始化
+        updateStats();
+    </script>
+</body>
+</html>
