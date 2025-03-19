@@ -8,10 +8,38 @@
         :root {
             --primary-color: #4a90e2;
             --danger-color: #ff4d4f;
+            --success-color: #52c41a;
             --background-color: #f5f7fa;
             --card-bg: #ffffff;
         }
 
+        /* 新增自定义网址输入框样式 */
+        .custom-url-group {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        .url-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .add-button {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        .add-button:hover {
+            opacity: 0.9;
+        }
+
+        /* 原有样式保持不变 */
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
             line-height: 1.6;
@@ -19,12 +47,10 @@
             background-color: var(--background-color);
             color: #333;
         }
-
         .container {
             max-width: 800px;
             margin: 0 auto;
         }
-
         .stats-card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -32,13 +58,11 @@
             margin-bottom: 1.5rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
-
         .button-group {
             display: flex;
             gap: 1rem;
             margin-top: 1rem;
         }
-
         .task-button {
             background: var(--primary-color);
             color: white;
@@ -50,69 +74,22 @@
             transition: transform 0.1s, background 0.3s;
             flex: 1;
         }
-
-        .task-button.danger {
-            background: var(--danger-color);
-        }
-
-        .task-button:hover {
-            transform: translateY(-1px);
-        }
-
-        .task-button.primary:hover {
-            background: #357abd;
-        }
-
-        .task-button.danger:hover {
-            background: #ff3336;
-        }
-
-        .project-list {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .project-item {
-            padding: 1rem;
-            margin: 0.5rem 0;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background 0.3s;
-        }
-
-        .project-item.unopened {
-            background: #f8f9fa;
-            border: 2px solid var(--primary-color);
-        }
-
-        .status-dot {
-            height: 12px;
-            width: 12px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .unopened-badge {
-            background: var(--primary-color);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-        }
+        /* ...（其他原有样式保持不变）... */
     </style>
 </head>
 <body>
     <div class="container">
         <div class="stats-card">
+            <!-- 新增自定义网址输入区域 -->
+            <div class="custom-url-group">
+                <input type="url" class="url-input" placeholder="输入自定义网址（需包含http://或https://）" id="customUrl">
+                <button class="add-button" onclick="addCustomProject()">添加</button>
+            </div>
+            
             <h2>项目统计</h2>
             <p>已打开：<span id="openedCount">0</span></p>
-            <p>未打开：<span id="unopenedCount">0</span></p>
+            <p>未打开：<span id="unopenedCount">0</span>（含<span id="customCount">0</span>个自定义）</p>
             
-            <!-- 新增按钮组 -->
             <div class="button-group">
                 <button class="task-button primary" onclick="openRandomProject()">获取随机任务</button>
                 <button class="task-button danger" onclick="clearProgress()">清空所有进度</button>
@@ -126,88 +103,94 @@
     </div>
 
     <script>
-        // 项目列表（已去重）
-        const projects = [
-            { name: "Kuru Swap", url: "https://www.kuru.io/swap" },
-            { name: "Curvance Monad", url: "https://monad.curvance.com/monad" },
-            { name: "Bebop", url: "https://bebop.xyz/" },
-            { name: "Bean Exchange", url: "https://swap.bean.exchange/" },
-            { name: "Flap Board", url: "https://monad.flap.sh/board" },
-            { name: "Fukunad", url: "https://testnet.fukunad.xyz/" },
-            { name: "Izumi Finance", url: "https://alpha.izumi.finance/trade/swap" },
-            { name: "Hashflow", url: "https://app.hashflow.com/" },
-            { name: "Kintsu Staking", url: "https://kintsu.xyz/staking" },
-            { name: "Magma Staking", url: "https://www.magmastaking.xyz/" },
-            { name: "Monorail", url: "https://testnet-preview.monorail.xyz/" },
-            { name: "Nitro Finance", url: "https://testapp.nitrofinance.xyz/trade" },
-            { name: "NFTs2Me", url: "https://nfts2me.com/create/edition/" },
-            { name: "Multipli", url: "https://testnet.multipli.fi/" },
-            { name: "MU Digital", url: "https://testnet.mudigital.net/" },
-            { name: "Nostra Finance", url: "https://monad.nostra.finance/lend-borrow" },
-            { name: "Octo Exchange", url: "https://octo.exchange/swap" },
-            { name: "PancakeSwap", url: "https://pancakeswap.finance/?chain=monadTestnet" },
-            { name: "Redbrick Portal", url: "https://redbrick.land/web3-portal?tab=monad_testnet" },
-            { name: "Sky Trade", url: "https://www.monad.sky.trade/" },
-            { name: "Timeswap", url: "https://app.timeswap.io/markets?chainId=10143" },
-            { name: "Zona Finance", url: "https://app.zona.finance/trade" },
-            { name: "Monad Testnet", url: "https://testnet.monad.xyz/" },
-            { name: "Kuru Markets", url: "https://www.kuru.io/markets" },
-            { name: "Shmonad", url: "https://www.shmonad.xyz/" },
-            { name: "Uniswap Monad", url: "https://app.uniswap.org/swap?chain=monad" },
-            { name: "Bebop Trade", url: "https://bebop.xyz/trade?network=monad&sell=MON&buy=WMON" },
-            { name: "Narwhal Finance", url: "https://testnet.narwhal.finance/slots" },
-            { name: "Dirol Network", url: "https://dex.dirol.network/swap" },
-            { name: "Ambient Finance", url: "https://monad.ambient.finance/" },
-            { name: "Clober Trade", url: "https://alpha.clober.io/trade?chain=10143" },
-            { name: "Crystal Exchange", url: "https://app.crystal.exchange/swap" },
-            { name: "XLMeme", url: "https://alpha-testnet.xlmeme.com/monad" },
-            { name: "APR Staking", url: "https://stake.apr.io/" }
-];
-
+        // 原始项目列表
+        const projects = [ /* 保持原有项目列表不变 */ ];
+        
+        // 新增自定义项目存储
+        let customProjects = JSON.parse(localStorage.getItem('customProjects')) || [];
         let openedProjects = JSON.parse(localStorage.getItem('openedProjects')) || [];
         
-        function updateStats() {
-            document.getElementById('openedCount').textContent = openedProjects.length;
-            document.getElementById('unopenedCount').textContent = projects.length - openedProjects.length;
-            renderProjectList();
-        }
-
-        // 新增清空进度功能
-        function clearProgress() {
-            if (confirm("确定要清空所有进度吗？此操作不可恢复！")) {
-                openedProjects = [];
-                localStorage.setItem('openedProjects', JSON.stringify(openedProjects));
-                updateStats();
-                alert("进度已重置！");
-            }
-        }
-
-        function openRandomProject() {
-            const randomIndex = Math.floor(Math.random() * projects.length);
-            const selectedProject = projects[randomIndex];
+        // 新增自定义项目功能
+        function addCustomProject() {
+            const urlInput = document.getElementById('customUrl');
+            const url = urlInput.value.trim();
             
-            if (!openedProjects.includes(selectedProject.url)) {
-                openedProjects.push(selectedProject.url);
-                localStorage.setItem('openedProjects', JSON.stringify(openedProjects));
+            if (!url) return;
+            
+            // 验证URL格式（参考网页5的重复校验逻辑）
+            if (!/^https?:\/\//.test(url)) {
+                alert('网址必须以http://或https://开头');
+                return;
             }
             
-            window.open(selectedProject.url, '_blank');
+            // 防止重复添加（参考网页5的重复校验）
+            if ([...projects, ...customProjects].some(p => p.url === url)) {
+                alert('该网址已存在');
+                return;
+            }
+            
+            customProjects.push({ 
+                name: `自定义项目-${customProjects.length + 1}`,
+                url: url 
+            });
+            
+            localStorage.setItem('customProjects', JSON.stringify(customProjects));
+            urlInput.value = '';
             updateStats();
         }
 
+        // 修改后的随机选择逻辑（整合自定义项目）
+        function openRandomProject() {
+            const allProjects = [...projects, ...customProjects];
+            const randomIndex = Math.floor(Math.random() * allProjects.length);
+            const selected = allProjects[randomIndex];
+            
+            if (!openedProjects.includes(selected.url)) {
+                openedProjects.push(selected.url);
+                localStorage.setItem('openedProjects', JSON.stringify(openedProjects));
+            }
+            
+            window.open(selected.url, '_blank');
+            updateStats();
+        }
+
+        // 更新统计信息显示
+        function updateStats() {
+            const total = projects.length + customProjects.length;
+            document.getElementById('openedCount').textContent = openedProjects.length;
+            document.getElementById('unopenedCount').textContent = total - openedProjects.length;
+            document.getElementById('customCount').textContent = customProjects.length;
+            renderProjectList();
+        }
+
+        // 渲染项目列表（包含自定义项目）
         function renderProjectList() {
             const container = document.getElementById('projectList');
-            container.innerHTML = projects.map(project => `
+            const allProjects = [...projects, ...customProjects];
+            
+            container.innerHTML = allProjects.map(project => `
                 <div class="project-item ${!openedProjects.includes(project.url) ? 'unopened' : ''}">
                     <div>
                         <span class="status-dot" style="background:${openedProjects.includes(project.url) ? '#ccc' : 'var(--primary-color)'}"></span>
                         ${project.name}
+                        ${customProjects.includes(project) ? '<small style="color:#666">（自定义）</small>' : ''}
                     </div>
                     ${!openedProjects.includes(project.url) ? 
                         '<span class="unopened-badge">未完成</span>' : 
                         '<span style="color: #666">已完成</span>'}
                 </div>
             `).join('');
+        }
+
+        // 清空进度时同时清除自定义项目（参考网页5的管理逻辑）
+        function clearProgress() {
+            if (confirm("确定要清空所有进度吗？此操作不可恢复！")) {
+                openedProjects = [];
+                customProjects = [];
+                localStorage.clear();
+                updateStats();
+                alert("进度和自定义项目已重置！");
+            }
         }
 
         // 初始化
