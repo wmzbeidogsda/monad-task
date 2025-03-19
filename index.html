@@ -117,7 +117,7 @@
             <p>未打开：<span id="unopenedCount">0</span></p>
             
             <h3 style="margin-top:1.5rem;">批量添加项目</h3>
-            <textarea class="batch-input" id="batchInput" placeholder="请输入批量项目（格式：项目名称,网址）&#10;示例：&#10;Kuru Swap,https://www.kuru.io/swap&#10;Curvance Monad,https://monad.curvance.com/monad"></textarea>
+            <textarea class="batch-input" id="batchInput" placeholder="输入批量项目网址（每行一个）&#10;示例：&#10;https://www.kuru.io/swap&#10;https://monad.curvance.com/monad"></textarea>
             
             <div class="button-group">
                 <button class="task-button success" onclick="batchAddProjects()">批量导入项目</button>
@@ -137,21 +137,48 @@
         let projects = JSON.parse(localStorage.getItem('projects')) || [];
         let openedProjects = JSON.parse(localStorage.getItem('openedProjects')) || [];
 
-        // 批量添加功能核心代码
+        // 自动生成项目名（核心改进）
+        function generateProjectName(url) {
+            try {
+                const urlObj = new URL(url);
+                let hostname = urlObj.hostname.replace(/^www\./, '');
+                let path = urlObj.pathname.replace(/^\//, '').split('/')[0];
+                
+                // 处理特殊字符并生成友好名称
+                const nameParts = [
+                    hostname.split('.')[0],
+                    path.replace(/[^a-zA-Z0-9]/g, ' ')
+                ].filter(Boolean);
+
+                return nameParts.map(part => 
+                    part.replace(/(^\w|\s\w)/g, m => m.toUpperCase())
+                ).join(' ');
+            } catch {
+                return url.replace(/^https?:\/\//, '').split('/')[0];
+            }
+        }
+
+        // 批量添加功能（改进版）
         function batchAddProjects() {
             const input = document.getElementById('batchInput').value;
             const newProjects = input.split('\n')
                 .map(line => line.trim())
                 .filter(line => line)
-                .map(line => {
-                    const [name, url] = line.split(',').map(s => s.trim());
-                    return { name, url };
-                })
-                .filter(project => project.name && project.url);
-            
+                .map(url => {
+                    // 自动补全协议（解决跳转问题）
+                    if (!url.startsWith('http')) url = `https://${url}`;
+                    return {
+                        name: generateProjectName(url),
+                        url: url
+                    };
+                });
+
             // 合并去重逻辑
             const existingUrls = new Set(projects.map(p => p.url));
-            const uniqueProjects = newProjects.filter(p => !existingUrls.has(p.url));
+            const uniqueProjects = newProjects.filter(p => 
+                !existingUrls.has(p.url) && 
+                /^https?:\/\//.test(p.url) // 验证URL格式
+            );
             
             projects = [...projects, ...uniqueProjects];
             localStorage.setItem('projects', JSON.stringify(projects));
@@ -159,7 +186,7 @@
             alert(`成功导入 ${uniqueProjects.length} 个新项目！`);
         }
 
-        // 随机打开功能（增强版）
+        // 随机打开功能（修复跳转问题）
         function openRandomProject() {
             if (projects.length === 0) {
                 alert('请先导入项目！');
@@ -177,7 +204,13 @@
             
             openedProjects.push(selectedProject.url);
             localStorage.setItem('openedProjects', JSON.stringify(openedProjects));
-            window.open(selectedProject.url, '_blank');
+            
+            // 修复跳转逻辑（网页3/5的启示）
+            const validUrl = selectedProject.url.startsWith('http') ? 
+                selectedProject.url : 
+                `https://${selectedProject.url}`;
+            
+            window.open(validUrl, '_blank');
             updateStats();
         }
 
@@ -214,52 +247,52 @@
             `).join('');
         }
 
-        // 初始化旧数据迁移
+        // 初始化旧数据迁移（兼容旧格式）
         if (localStorage.getItem('legacyProjects')) {
             const legacyData = `
-                Kuru Swap,https://www.kuru.io/swap
-                Curvance Monad,https://monad.curvance.com/monad
-                Bebop,https://bebop.xyz/
-                Bean Exchange,https://swap.bean.exchange/
-                Flap Board,https://monad.flap.sh/board
-                Fukunad,https://testnet.fukunad.xyz/
-                Izumi Finance,https://alpha.izumi.finance/trade/swap
-                Hashflow,https://app.hashflow.com/
-                Kintsu Staking,https://kintsu.xyz/staking
-                Magma Staking,https://www.magmastaking.xyz/
-                Monorail,https://testnet-preview.monorail.xyz/
-                Nitro Finance,https://testapp.nitrofinance.xyz/trade
-                NFTs2Me,https://nfts2me.com/create/edition/
-                Multipli,https://testnet.multipli.fi/
-                MU Digital,https://testnet.mudigital.net/
-                Nostra Finance,https://monad.nostra.finance/lend-borrow
-                Octo Exchange,https://octo.exchange/swap
-                PancakeSwap,https://pancakeswap.finance/?chain=monadTestnet
-                Redbrick Portal,https://redbrick.land/web3-portal?tab=monad_testnet
-                Sky Trade,https://www.monad.sky.trade/
-                Timeswap,https://app.timeswap.io/markets?chainId=10143
-                Zona Finance,https://app.zona.finance/trade
-                Monad Testnet,https://testnet.monad.xyz/
-                Kuru Markets,https://www.kuru.io/markets
-                Shmonad,https://www.shmonad.xyz/
-                Uniswap Monad,https://app.uniswap.org/swap?chain=monad
-                Bebop Trade,https://bebop.xyz/trade?network=monad&sell=MON&buy=WMON
-                Narwhal Finance,https://testnet.narwhal.finance/slots
-                Dirol Network,https://dex.dirol.network/swap
-                Ambient Finance,https://monad.ambient.finance/
-                Clober Trade,https://alpha.clober.io/trade?chain=10143
-                Crystal Exchange,https://app.crystal.exchange/swap
-                XLMeme,https://alpha-testnet.xlmeme.com/monad
-                APR Staking,https://stake.apr.io/
+                https://www.kuru.io/swap
+                https://monad.curvance.com/monad
+                https://bebop.xyz/
+                https://swap.bean.exchange/
+                https://monad.flap.sh/board
+                https://testnet.fukunad.xyz/
+                https://alpha.izumi.finance/trade/swap
+                https://app.hashflow.com/
+                https://kintsu.xyz/staking
+                https://www.magmastaking.xyz/
+                https://testnet-preview.monorail.xyz/
+                https://testapp.nitrofinance.xyz/trade
+                https://nfts2me.com/create/edition/
+                https://testnet.multipli.fi/
+                https://testnet.mudigital.net/
+                https://monad.nostra.finance/lend-borrow
+                https://octo.exchange/swap
+                https://pancakeswap.finance/?chain=monadTestnet
+                https://redbrick.land/web3-portal?tab=monad_testnet
+                https://www.monad.sky.trade/
+                https://app.timeswap.io/markets?chainId=10143
+                https://app.zona.finance/trade
+                https://testnet.monad.xyz/
+                https://www.kuru.io/markets
+                https://www.shmonad.xyz/
+                https://app.uniswap.org/swap?chain=monad
+                https://bebop.xyz/trade?network=monad&sell=MON&buy=WMON
+                https://testnet.narwhal.finance/slots
+                https://dex.dirol.network/swap
+                https://monad.ambient.finance/
+                https://alpha.clober.io/trade?chain=10143
+                https://app.crystal.exchange/swap
+                https://alpha-testnet.xlmeme.com/monad
+                https://stake.apr.io/
             `;
             
             const legacyProjects = legacyData.split('\n')
                 .map(line => line.trim())
                 .filter(line => line)
-                .map(line => {
-                    const [name, url] = line.split(',').map(s => s.trim());
-                    return { name, url };
-                });
+                .map(url => ({
+                    name: generateProjectName(url),
+                    url: url
+                }));
             
             projects = [...legacyProjects, ...projects];
             localStorage.removeItem('legacyProjects');
