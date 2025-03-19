@@ -7,6 +7,7 @@
     <style>
         :root {
             --primary-color: #4a90e2;
+            --danger-color: #ff4d4f;
             --background-color: #f5f7fa;
             --card-bg: #ffffff;
         }
@@ -30,8 +31,12 @@
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .button-group {
             display: flex;
-            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 1rem;
         }
 
         .task-button {
@@ -43,11 +48,23 @@
             cursor: pointer;
             font-size: 16px;
             transition: transform 0.1s, background 0.3s;
+            flex: 1;
+        }
+
+        .task-button.danger {
+            background: var(--danger-color);
         }
 
         .task-button:hover {
-            background: #357abd;
             transform: translateY(-1px);
+        }
+
+        .task-button.primary:hover {
+            background: #357abd;
+        }
+
+        .task-button.danger:hover {
+            background: #ff3336;
         }
 
         .project-list {
@@ -91,12 +108,15 @@
 <body>
     <div class="container">
         <div class="stats-card">
-            <div>
-                <h2>项目统计</h2>
-                <p>已打开：<span id="openedCount">0</span></p>
-                <p>未打开：<span id="unopenedCount">0</span></p>
+            <h2>项目统计</h2>
+            <p>已打开：<span id="openedCount">0</span></p>
+            <p>未打开：<span id="unopenedCount">0</span></p>
+            
+            <!-- 新增按钮组 -->
+            <div class="button-group">
+                <button class="task-button primary" onclick="openRandomProject()">获取随机任务</button>
+                <button class="task-button danger" onclick="clearProgress()">清空所有进度</button>
             </div>
-            <button class="task-button" onclick="openRandomProject()">获取随机任务</button>
         </div>
 
         <div class="project-list">
@@ -142,7 +162,7 @@
             { name: "Crystal Exchange", url: "https://app.crystal.exchange/swap" },
             { name: "XLMeme", url: "https://alpha-testnet.xlmeme.com/monad" },
             { name: "APR Staking", url: "https://stake.apr.io/" }
-        ];
+];
 
         let openedProjects = JSON.parse(localStorage.getItem('openedProjects')) || [];
         
@@ -150,6 +170,16 @@
             document.getElementById('openedCount').textContent = openedProjects.length;
             document.getElementById('unopenedCount').textContent = projects.length - openedProjects.length;
             renderProjectList();
+        }
+
+        // 新增清空进度功能
+        function clearProgress() {
+            if (confirm("确定要清空所有进度吗？此操作不可恢复！")) {
+                openedProjects = [];
+                localStorage.setItem('openedProjects', JSON.stringify(openedProjects));
+                updateStats();
+                alert("进度已重置！");
+            }
         }
 
         function openRandomProject() {
