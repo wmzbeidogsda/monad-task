@@ -161,7 +161,6 @@
             <div class="button-group">
                 <button class="task-button success" onclick="batchAddProjects()">批量导入项目</button>
                 <div class="quantity-control">
-                    <input type="number" id="openQuantity" min="1" value="1" title="每次打开数量">
                     <button class="task-button primary" onclick="openRandomProjects()">随机打开任务</button>
                 </div>
                 <button class="task-button danger" onclick="clearProgress()">重置已打开</button>
@@ -171,6 +170,7 @@
                 <input type="checkbox" id="selectAll" class="select-all-checkbox" onchange="toggleSelectAll(this.checked)">
                 <label for="selectAll">全选</label>
                 <button class="task-button danger compact-button" onclick="batchDelete()">批量删除</button>
+                                    <input type="number" id="openQuantity" min="1" value="1" title="每次打开数量">
             </div>
         </div>
 
