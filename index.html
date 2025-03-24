@@ -109,7 +109,6 @@
             border-radius: 8px;
         }
 
-        /* 新增复选框样式 */
         .checkbox-group {
             display: flex;
             align-items: center;
@@ -126,6 +125,27 @@
             left: 15px;
             transform: scale(1.2);
         }
+
+        /* 新增数量输入框样式 */
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #openQuantity {
+            width: 60px;
+            padding: 8px;
+            border: 2px solid var(--primary-color);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        /* 调整批量删除按钮样式 */
+        .compact-button {
+            padding: 8px 16px;
+            flex: none;
+        }
     </style>
 </head>
 <body>
@@ -140,15 +160,17 @@
             
             <div class="button-group">
                 <button class="task-button success" onclick="batchAddProjects()">批量导入项目</button>
-                <button class="task-button primary" onclick="openRandomProject()">随机打开任务</button>
-                <button class="task-button danger" onclick="clearProgress()">重置所有已打开</button>
+                <div class="quantity-control">
+                    <input type="number" id="openQuantity" min="1" value="1" title="每次打开数量">
+                    <button class="task-button primary" onclick="openRandomProjects()">随机打开任务</button>
+                </div>
+                <button class="task-button danger" onclick="clearProgress()">重置已打开</button>
             </div>
 
-            <!-- 新增批量操作区域 -->
             <div class="checkbox-group" style="margin-top:1.5rem;">
                 <input type="checkbox" id="selectAll" class="select-all-checkbox" onchange="toggleSelectAll(this.checked)">
                 <label for="selectAll">全选</label>
-                <button class="task-button danger" onclick="batchDelete()">批量删除选中项</button>
+                <button class="task-button danger compact-button" onclick="batchDelete()">批量删除</button>
             </div>
         </div>
 
@@ -162,9 +184,9 @@
         // 初始化项目列表（兼容旧版数据）
         let projects = JSON.parse(localStorage.getItem('projects')) || [];
         let openedProjects = JSON.parse(localStorage.getItem('openedProjects')) || [];
-        let selectedProjects = new Set(); // 新增选中项目集合
+        let selectedProjects = new Set();
 
-        // 自动生成项目名（核心改进）
+        // 自动生成项目名
         function generateProjectName(url) {
             try {
                 const urlObj = new URL(url);
@@ -184,7 +206,40 @@
             }
         }
 
-        // 新增全选切换功能
+        // 随机打开多个项目（新增功能）
+        function openRandomProjects() {
+            const quantity = parseInt(document.getElementById('openQuantity').value) || 1;
+            
+            if (projects.length === 0) {
+                alert('请先导入项目！');
+                return;
+            }
+            
+            const unopened = projects.filter(p => !openedProjects.includes(p.url));
+            if (unopened.length === 0) {
+                alert('所有项目已完成！');
+                return;
+            }
+
+            const maxQuantity = Math.min(quantity, unopened.length);
+            if (maxQuantity < quantity) {
+                alert(`未完成项目不足，本次将打开${maxQuantity}个`);
+            }
+
+            // 打乱数组并取前N个
+            const shuffled = unopened.sort(() => 0.5 - Math.random());
+            const selected = shuffled.slice(0, maxQuantity);
+
+            selected.forEach(project => {
+                openedProjects.push(project.url);
+                window.open(project.url, '_blank');
+            });
+
+            localStorage.setItem('openedProjects', JSON.stringify(openedProjects));
+            updateStats();
+        }
+
+        // 全选切换功能
         function toggleSelectAll(checked) {
             const checkboxes = document.querySelectorAll('.project-checkbox');
             checkboxes.forEach(checkbox => {
@@ -193,25 +248,20 @@
             });
         }
 
-        // 新增单个项目选择处理
+        // 单个项目选择处理
         function handleProjectSelect(checkbox) {
             const url = checkbox.dataset.url;
-            if (checkbox.checked) {
-                selectedProjects.add(url);
-            } else {
-                selectedProjects.delete(url);
-            }
+            checkbox.checked ? selectedProjects.add(url) : selectedProjects.delete(url);
             updateSelectAllState();
         }
 
-        // 新增更新全选状态
+        // 更新全选状态
         function updateSelectAllState() {
-            const allChecked = projects.length > 0 && 
-                selectedProjects.size === projects.length;
-            document.getElementById('selectAll').checked = allChecked;
+            document.getElementById('selectAll').checked = 
+                projects.length > 0 && selectedProjects.size === projects.length;
         }
 
-        // 新增批量删除功能
+        // 批量删除功能
         function batchDelete() {
             if (selectedProjects.size === 0) {
                 alert('请先选择要删除的项目！');
@@ -231,7 +281,7 @@
             }
         }
 
-        // 批量添加功能（改进版）
+        // 批量添加功能
         function batchAddProjects() {
             const input = document.getElementById('batchInput').value;
             const newProjects = input.split('\n')
@@ -239,45 +289,17 @@
                 .filter(line => line)
                 .map(url => {
                     if (!url.startsWith('http')) url = `https://${url}`;
-                    return {
-                        name: generateProjectName(url),
-                        url: url
-                    };
+                    return { name: generateProjectName(url), url: url };
                 });
 
             const existingUrls = new Set(projects.map(p => p.url));
             const uniqueProjects = newProjects.filter(p => 
-                !existingUrls.has(p.url) && 
-                /^https?:\/\//.test(p.url)
-            );
+                !existingUrls.has(p.url) && /^https?:\/\//.test(p.url));
             
             projects = [...projects, ...uniqueProjects];
             localStorage.setItem('projects', JSON.stringify(projects));
             updateStats();
             alert(`成功导入 ${uniqueProjects.length} 个新项目！`);
-        }
-
-        // 随机打开功能
-        function openRandomProject() {
-            if (projects.length === 0) {
-                alert('请先导入项目！');
-                return;
-            }
-            
-            const unopened = projects.filter(p => !openedProjects.includes(p.url));
-            if (unopened.length === 0) {
-                alert('所有项目已完成！');
-                return;
-            }
-            
-            const randomIndex = Math.floor(Math.random() * unopened.length);
-            const selectedProject = unopened[randomIndex];
-            
-            openedProjects.push(selectedProject.url);
-            localStorage.setItem('openedProjects', JSON.stringify(openedProjects));
-            
-            window.open(selectedProject.url, '_blank');
-            updateStats();
         }
 
         // 清空进度功能
@@ -297,7 +319,7 @@
             renderProjectList();
         }
 
-        // 渲染项目列表（新增复选框）
+        // 渲染项目列表
         function renderProjectList() {
             const container = document.getElementById('projectList');
             container.innerHTML = projects.map(project => `
@@ -318,7 +340,6 @@
                         '<span style="color: #666">已完成</span>'}
                 </div>
             `).join('');
-            
             updateSelectAllState();
         }
 
@@ -364,10 +385,7 @@
             const legacyProjects = legacyData.split('\n')
                 .map(line => line.trim())
                 .filter(line => line)
-                .map(url => ({
-                    name: generateProjectName(url),
-                    url: url
-                }));
+                .map(url => ({ name: generateProjectName(url), url: url }));
             
             projects = [...legacyProjects, ...projects];
             localStorage.removeItem('legacyProjects');
