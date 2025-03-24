@@ -109,42 +109,42 @@
             border-radius: 8px;
         }
 
-        /* 新版操作栏样式 */
-        .action-bar {
+        .checkbox-group {
             display: flex;
-            gap: 1rem;
             align-items: center;
-            margin-top: 1.5rem;
-            flex-wrap: wrap;
+            gap: 1rem;
         }
 
-        .quantity-group {
+        .select-all-checkbox {
+            margin-left: 10px;
+            transform: scale(1.2);
+        }
+
+        .project-checkbox {
+            position: absolute;
+            left: 15px;
+            transform: scale(1.2);
+        }
+
+        /* 新增数量输入框样式 */
+        .quantity-control {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            background: #f0f4ff;
-            padding: 8px 12px;
-            border-radius: 6px;
         }
 
         #openQuantity {
-            width: 50px;
-            padding: 6px;
-            border: 1px solid var(--primary-color);
-            border-radius: 4px;
-            text-align: center;
-        }
-
-        .select-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-left: auto;
-        }
-
-        .select-all-label {
+            width: 60px;
+            padding: 8px;
+            border: 2px solid var(--primary-color);
+            border-radius: 6px;
             font-size: 14px;
-            color: #666;
+        }
+
+        /* 调整批量删除按钮样式 */
+        .compact-button {
+            padding: 8px 16px;
+            flex: none;
         }
     </style>
 </head>
@@ -160,21 +160,18 @@
             
             <div class="button-group">
                 <button class="task-button success" onclick="batchAddProjects()">批量导入项目</button>
-                <button class="task-button primary" onclick="openRandomProjects()">随机打开任务</button>
+                <div class="quantity-control">
+                    <button class="task-button primary" onclick="openRandomProjects()">随机打开任务</button>
+                </div>
                 <button class="task-button danger" onclick="clearProgress()">重置已打开</button>
             </div>
 
-            <div class="action-bar">
-                <div class="quantity-group">
-                    <span>每次打开数量：</span>
-                    <input type="number" id="openQuantity" min="1" value="1" title="每次打开数量">
-                </div>
-                
-                <div class="select-group">
-                    <button class="task-button danger" onclick="batchDelete()" style="padding: 8px 16px">批量删除</button>
-                    <input type="checkbox" id="selectAll" style="transform: scale(1.2)">
-                    <label class="select-all-label" for="selectAll">全选</label>
-                </div>
+            <div class="checkbox-group" style="margin-top:1.5rem;">
+                <input type="checkbox" id="selectAll" class="select-all-checkbox" onchange="toggleSelectAll(this.checked)">
+                <label for="selectAll">全选</label>
+                <button class="task-button danger compact-button" onclick="batchDelete()">批量删除</button>
+                     <h3 style="margin-top:1.5rem;">自定义打开数量</h3>
+<input type="number" id="openQuantity" min="1" value="1" title="每次打开数量">
             </div>
         </div>
 
@@ -210,7 +207,7 @@
             }
         }
 
-        // 随机打开多个项目（优化版）
+        // 随机打开多个项目（新增功能）
         function openRandomProjects() {
             const quantity = parseInt(document.getElementById('openQuantity').value) || 1;
             
@@ -225,14 +222,15 @@
                 return;
             }
 
-            // Fisher-Yates洗牌算法
-            const shuffled = [...unopened];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            const maxQuantity = Math.min(quantity, unopened.length);
+            if (maxQuantity < quantity) {
+                alert(`未完成项目不足，本次将打开${maxQuantity}个`);
             }
 
-            const selected = shuffled.slice(0, Math.min(quantity, shuffled.length));
+            // 打乱数组并取前N个
+            const shuffled = unopened.sort(() => 0.5 - Math.random());
+            const selected = shuffled.slice(0, maxQuantity);
+
             selected.forEach(project => {
                 openedProjects.push(project.url);
                 window.open(project.url, '_blank');
@@ -397,9 +395,6 @@
 
         // 初始化
         updateStats();
-        document.getElementById('selectAll').addEventListener('change', function() {
-            toggleSelectAll(this.checked);
-        });
     </script>
 </body>
 </html>
